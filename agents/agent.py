@@ -1,8 +1,7 @@
 import os, sys
-sys.path.append(os.pardir)
 
 import numpy as np
-from lib.debug import debug_print
+from debug import debug_print
 
 class Agent(object):
     isArrived = False

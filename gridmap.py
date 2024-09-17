@@ -2,7 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 # from lib.utils import *
-import PythonRobotics.Mapping.lidar_to_grid_map.lidar_to_grid_map as lg
+import lidar_to_grid_map as lg
 # from agent_define import Agent
 
 

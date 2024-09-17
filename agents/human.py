@@ -1,5 +1,4 @@
 import os, sys
-sys.path.append(os.pardir)
 
 import random
 import datetime
@@ -10,9 +9,9 @@ from decimal import Decimal, ROUND_HALF_UP, ROUND_HALF_EVEN
 from typing import List, Dict
 from dataclasses import dataclass
 
-from lib.utils import generate_pseudo_trajectory, calculate_smooth_angle, makeHumanPath
+from utils import generate_pseudo_trajectory, calculate_smooth_angle, makeHumanPath
 from agents.agent import Agent
-from lib.debug import debug_print
+from debug import debug_print
 
 class HumanManager():
     

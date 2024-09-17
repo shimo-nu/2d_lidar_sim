@@ -10,10 +10,9 @@ from matplotlib.ticker import MaxNLocator
 from decimal import *
 import math
 from scipy.interpolate import interp1d, CubicSpline
-import PythonRobotics.Mapping.lidar_to_grid_map.lidar_to_grid_map as lg
+import lidar_to_grid_map as lg
 import joblib
 from joblib import cpu_count
-import rvo2
 
 
 def stop_watch(func):
@@ -170,7 +169,7 @@ def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", map
     if (mapinfo is not None):
         x = [i[0] for i in mapinfo]
         y = [i[1] for i in mapinfo]
-        ax.scatter(x, y)
+        ax.plot(x, y)
 
     if (axis_option):
         fig.colorbar(data_plot)
@@ -584,7 +583,7 @@ def one_azimuth_scan(ogm_info, mapinfo, robot_position, target_point, agent_list
                     robot_position, target_point, wall_start, wall_end)
                 if (_cross_map_wall_point is None):
                     continue
-                elif (cross_map_wall_point == target_point or calcEuclidean(robot_position, _cross_map_wall_point) < calcEuclidean(robot_position, cross_map_wall_point)):
+                elif (cross_map_wall_point == target_point or calcEuclidean(robot_position, _cross_map_wall_point) <= calcEuclidean(robot_position, cross_map_wall_point)):
                     cross_map_wall_point = _cross_map_wall_point
             except:
                 # print("robot_pos : {}".format(robot_position))
@@ -600,7 +599,7 @@ def one_azimuth_scan(ogm_info, mapinfo, robot_position, target_point, agent_list
     # try:
     robot_position_ru = [int(decimal_round(robot_position[0])), int(decimal_round(robot_position[1]))]
 
-    cross_map_wall_point_ru = [int(decimal_round(cross_map_wall_point[0])), int(decimal_round(cross_map_wall_point[1]))]
+    cross_map_wall_point_ru = [int(decimal_round(cross_map_wall_point[0]))- 1, int(decimal_round(cross_map_wall_point[1])) - 1]
     try:
         laser_beams = lg.bresenham(
             robot_position_ru, cross_map_wall_point_ru)
