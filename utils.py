@@ -155,7 +155,7 @@ def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", map
     data_plot = ax.imshow(data, cmap="Purples",  vmin=0, vmax=1,origin='upper', extent=[0,data_size[0], data_size[1], 0],interpolation='none', alpha=1)
     if (agent_list is None):
         for agent in agent_list:
-            ax.plot(agent.position[0], agent.position[1],  c="#42F371", marker=".", markersize=10)
+            ax.plot(agent.position[0], agent.position[1],  c="#42F371", marker=".", markersize=20)
     
     # plt.grid(True, which="minor", color="w", linewidth=.6, alpha=0.5)
     if (grid_marks is not None):
@@ -170,7 +170,7 @@ def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", map
     if (mapinfo is not None):
         x = [i[0] for i in mapinfo]
         y = [i[1] for i in mapinfo]
-        ax.plot(x, y)
+        ax.scatter(x, y)
 
     if (axis_option):
         fig.colorbar(data_plot)
