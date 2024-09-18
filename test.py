@@ -51,4 +51,6 @@ plt.close()
 fig, ax = plt.subplots()
 plot(ogm, fig, ax, mapinfo = new_mapinfo, agent_list=human_list, dst=dst, now=robot_position, axis_option=not isShowAxisOption)
 
+ax.set_xlim(0, 100)
+ax.set_ylim(0, 100)
 plt.show()
