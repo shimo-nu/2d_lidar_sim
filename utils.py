@@ -147,12 +147,13 @@ def plot_path(path):
     plt.plot(goal_x, goal_y, 'go')
 
     plt.show()
+
 def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", mapinfo = None,  grid_marks = None, filter_size = 1, axis_option=False):
     data_size = data.shape
     
     
     data_plot = ax.imshow(data, cmap="Purples",  vmin=0, vmax=1,origin='upper', extent=[0,data_size[0], data_size[1], 0],interpolation='none', alpha=1)
-    if (agent_list is None):
+    if (agent_list is not None):
         for agent in agent_list:
             ax.plot(agent.position[0], agent.position[1],  c="#42F371", marker=".", markersize=20)
     
@@ -177,6 +178,61 @@ def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", map
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.invert_yaxis()
+
+def plot_test(data, fig, ax, agent_list=None, dst=None, now=None, title="", mapinfo=None, grid_marks=None, filter_size=1, axis_option=False):
+    data_size = data.shape
+    node_coordinates = []  
+
+    data_plot = ax.imshow(data, cmap="Purples", vmin=0, vmax=1, origin='upper', 
+                          extent=[0, data_size[0], data_size[1], 0], interpolation='none', alpha=1)
+
+    if agent_list is not None:
+        for agent in agent_list:
+            ax.plot(agent.position[0], agent.position[1], c="#42F371", marker=".", markersize=5)
+    
+    if grid_marks is not None:
+        for grid_mark in grid_marks:
+            r = patches.Rectangle([grid_mark[0] - int(filter_size / 2), grid_mark[1] - int(filter_size / 2)], 
+                                  filter_size, filter_size, fill=True, edgecolor="blue", linewidth=3, label="rectangle")
+            ax.add_patch(r)
+
+    #ノードの可視化
+    node_count = 10  
+    node_size = data_size[0] // node_count  
+    for i in range(node_count):
+        for j in range(node_count):
+            # 対応する ogm の値が 0 でない場合のみ点を描画
+            ogm_x = int((i + 1/2) * node_size) 
+            ogm_y = int((j + 1/2) * node_size)
+            
+            # ogm が 0 でない場合のみ描画
+            if data[ogm_y, ogm_x] != 0:  
+                ax.plot((i + 1/2) * node_size, (j + 1/2) * node_size, 'o', c="green", markersize=2)
+                node_coordinates.append((ogm_x, ogm_y))
+
+    ax.set_title(title)
+    
+    if dst is not None:
+        ax.plot(dst[0], dst[1], 'x', c="red", markersize=10)
+    
+    if now is not None:
+        ax.plot(now[0], now[1], '.', c="blue", markersize=10)
+    
+    if mapinfo is not None:
+        x = [i[0] for i in mapinfo]
+        y = [i[1] for i in mapinfo]
+        ax.plot(x, y)
+    
+    if axis_option and fig is not None:
+        fig.colorbar(data_plot)
+
+    # 軸の設定
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.invert_yaxis()
+
+    return node_coordinates
+
 def doRough(data, stride = 2, filter_size = 2, isPlot=False) -> None:
     data_size = data.shape
     # new_ogm_size = [int(data.dim_cells[0] / slide_value), int(data.dim_cells[1] / slide_value)]
