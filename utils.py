@@ -179,7 +179,7 @@ def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", map
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.invert_yaxis()
 
-def plot_test(data, fig, ax, agent_list=None, dst=None, now=None, title="", mapinfo=None, grid_marks=None, filter_size=1, axis_option=False):
+def plot_test(data, fig, ax, vis_node, agent_list=None, dst=None, now=None, title="", mapinfo=None, grid_marks=None, filter_size=1, axis_option=False):
     data_size = data.shape
     node_coordinates = []  
 
@@ -198,17 +198,14 @@ def plot_test(data, fig, ax, agent_list=None, dst=None, now=None, title="", mapi
 
     #ノードの可視化
     node_count = 10  
-    node_size = data_size[0] // node_count  
-    for i in range(node_count):
-        for j in range(node_count):
-            # 対応する ogm の値が 0 でない場合のみ点を描画
-            ogm_x = int((i + 1/2) * node_size) 
-            ogm_y = int((j + 1/2) * node_size)
-            
-            # ogm が 0 でない場合のみ描画
-            if data[ogm_y, ogm_x] != 0:  
-                ax.plot((i + 1/2) * node_size, (j + 1/2) * node_size, 'o', c="green", markersize=2)
-                node_coordinates.append((ogm_x, ogm_y))
+    node_size = 10
+    for idx in vis_node:
+        i = idx // node_count
+        j = idx % node_count
+
+        x = int((i + 0.5) * node_size)
+        y = int((j + 0.5) * node_size)
+        ax.plot((i + 1/2) * node_size, (j + 1/2) * node_size, 'o', c="green", markersize=2)
 
     ax.set_title(title)
     
@@ -231,7 +228,96 @@ def plot_test(data, fig, ax, agent_list=None, dst=None, now=None, title="", mapi
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.invert_yaxis()
 
+def extract_nodes(data, current_node=None, node_count=10):
+    data_size = data.shape
+    node_coordinates = []  # 抽出したノードの座標を格納するリスト
+
+    # ノードのサイズと位置を計算
+    node_size = data_size[0] // node_count  
+    for i in range(node_count):
+        for j in range(node_count):
+            ogm_x = int((i + 1/2) * node_size) 
+            ogm_y = int((j + 1/2) * node_size)
+            
+            # ogm の値が 0 の場合にノードを抽出
+            if data[ogm_y, ogm_x] == 0:  
+                node_coordinates.append((ogm_x, ogm_y))
+
+    # 現在のノードをリストに含める
+    if current_node is not None:
+        if current_node not in node_coordinates:
+            node_coordinates.append(current_node)
+
     return node_coordinates
+
+def extract_nodes_id(data, id=None, node_count=10, node_dis=10):
+    node_indices = []  # 抽出したノードの番号を格納するリスト
+
+    for idx in range(node_count * node_count): #左下から上に向かってindexを付与
+        i = idx % node_count 
+        j = idx // node_count
+        ogm_x = int((i + 0.5) * node_dis)
+        ogm_y = int((j + 0.5) * node_dis)
+            
+        if data[ogm_x, ogm_y] == 0:
+            node_indices.append(idx)
+
+    # 現在のノード番号をリストに含める
+    if id is not None:
+        node_indices.append(id)
+
+    node_indices.sort()
+
+    return node_indices
+
+def plot_data(data, fig, ax, node_coordinates, agent_list=None, dst=None, now=None, title="", mapinfo=None, grid_marks=None, filter_size=1, axis_option=False):
+    data_size = data.shape
+    
+    # データの可視化
+    data_plot = ax.imshow(data, cmap="Purples", vmin=0, vmax=1, origin='upper', 
+                          extent=[0, data_size[0], data_size[1], 0], interpolation='none', alpha=1)
+
+    # エージェントの描画
+    if agent_list is not None:
+        for agent in agent_list:
+            ax.plot(agent.position[0], agent.position[1], c="#42F371", marker=".", markersize=5)
+    
+    # グリッドマークの描画
+    if grid_marks is not None:
+        for grid_mark in grid_marks:
+            r = patches.Rectangle([grid_mark[0] - int(filter_size / 2), grid_mark[1] - int(filter_size / 2)], 
+                                  filter_size, filter_size, fill=True, edgecolor="blue", linewidth=3, label="rectangle")
+            ax.add_patch(r)
+
+    # 抽出されたノードの可視化
+    for coord in node_coordinates:
+        ax.plot(coord[0], coord[1], 'o', c="green", markersize=2)
+
+    # タイトル設定
+    ax.set_title(title)
+    
+    # 目的地の描画
+    if dst is not None:
+        ax.plot(dst[0], dst[1], 'x', c="red", markersize=10)
+    
+    # 現在位置の描画
+    if now is not None:
+        ax.plot(now[0], now[1], '.', c="blue", markersize=10)
+    
+    # マップ情報の描画
+    if mapinfo is not None:
+        x = [i[0] for i in mapinfo]
+        y = [i[1] for i in mapinfo]
+        ax.plot(x, y)
+    
+    # カラーバー設定
+    if axis_option and fig is not None:
+        fig.colorbar(data_plot)
+
+    # 軸設定
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.invert_yaxis()
 
 def doRough(data, stride = 2, filter_size = 2, isPlot=False) -> None:
     data_size = data.shape

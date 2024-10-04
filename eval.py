@@ -1,3 +1,4 @@
+# 評価のためのコード　
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -37,7 +38,7 @@ def plot_final_map(ogm, new_mapinfo, human_list, robot_position, destination, ax
     ax.set_ylim(0, 100)
 
 def main():
-    robot_positions = [(45, 5), (45, 75), (95, 55)]
+    robot_positions = [(55, 5), (55, 65), (45, 5), (45, 65)]
     # ロボットとエージェントの初期位置
     agent_positions = [[70, 50, 0], [40, 50, 0], [80, 45, np.pi/4], [35, 20, np.pi/2], [65, 30, np.pi/3], [80, 30, np.pi/2]]
 
