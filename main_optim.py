@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from utils import makeWall
 
 AGENT_POSITIONS = [[70, 50, 0], [40, 50, 0], [80, 45, np.pi/4], [35, 20, np.pi/2], [65, 30, np.pi/3], [80, 30, np.pi/2]]
-NODE_GRID = 10 #[1m]
-NODE_INTERVAL = 10 #[1m]
+NODE_GRID = 15 #[1m]
+NODE_INTERVAL = 6 #[1m]
 OPTIM_TIME = 120 #[120s]
 
 def main():
@@ -39,10 +39,8 @@ def main():
 
     ogm = np.ones((100, 100))
     for pos in sorted_pos:
-
         mapinfo = makeWall(pos, 51)
         new_mapinfo = map_manager.new_mapinfo
-
         map_manager.scan_and_update_map(mapinfo, new_mapinfo, pos, ogm)
 
     plot_vis(data=ogm, grid_nodes=grid_nodes, pos=sorted_pos, agent_list=map_manager.human_manager, mapinfo=new_mapinfo)

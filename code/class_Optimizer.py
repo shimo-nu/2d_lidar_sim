@@ -8,11 +8,14 @@ class Optimizer:
 
     @staticmethod
     def calculate_distance(point1, point2):
-        """2点間の距離を計算"""
-        return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+        """2点間の距離を小数点以下3桁まで計算"""
+        return round(math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2), 3)
 
     def simultaneous_optimization(self, visible_nodes_id, grid_nodes, total_nodes):
         """Gurobiを使った最適化処理"""
+
+        print("Create OptimModel")
+        print("total node:", total_nodes)
         m = gp.Model("simultaneous_optimization")
         m.setParam('TimeLimit', self.time_limit)
 
@@ -23,10 +26,22 @@ class Optimizer:
         distances = {(i, j): self.calculate_distance(grid_nodes[i], grid_nodes[j]) for i in range(total_nodes) for j in range(total_nodes) if i != j}
 
         # 目的関数: 移動距離の最小化
-        m.setObjective(
-            gp.quicksum(x[t, i] * x[t+1, j] * distances[i, j] for t in range(total_nodes-1) for i in range(total_nodes) for j in range(total_nodes) if i != j),
-            GRB.MINIMIZE
-        )
+        # m.setObjective(
+        #     gp.quicksum(x[t, i] * x[t+1, j] * distances[i, j] for t in range(total_nodes-1) for i in range(total_nodes) for j in range(total_nodes) if i != j),
+        #     GRB.MINIMIZE
+        # )
+
+        # 目的関数: 移動距離の最小化
+        quad_expr = gp.QuadExpr()
+        for t in range(total_nodes - 1):
+            for i in range(total_nodes):
+                for j in range(total_nodes):
+                    if i != j:
+                        # 各ステップの進行状況を表示
+                        print(f"Adding to quad_expr: t={t}, i={i}, j={j}, distance={distances[i, j]}")
+                        quad_expr += x[t, i] * x[t+1, j] * distances[i, j]
+        
+        m.setObjective(quad_expr, GRB.MINIMIZE)
 
         # 制約条件: 各時刻 t に 1 つ以下のノードにのみいる
         m.addConstrs(gp.quicksum(x[t, i] for i in range(total_nodes)) <= 1 for t in range(total_nodes))
@@ -43,6 +58,8 @@ class Optimizer:
             if covering_constr:
                 m.addConstr(gp.quicksum(covering_constr) >= 1, name=f"cover_{j}")
 
+        print("Finish Create OptimModel")
+        print("Start Optimize!")
         m.optimize()
 
         # 最適解を取得

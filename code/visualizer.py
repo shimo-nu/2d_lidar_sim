@@ -54,7 +54,7 @@ def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="" , ax
     fig, ax = plt.subplots()
     data_size = data.shape
 
-    data_plot = ax.imshow(data, cmap="Purples", vmin=0, vmax=1, origin='lower', 
+    data_plot = ax.imshow(data, cmap="Purples", vmin=0, vmax=1, origin='upper', 
                           extent=[0, data_size[0], data_size[1], 0], interpolation='none', alpha=1)
 
     if agent_list is not None:
@@ -83,7 +83,6 @@ def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="" , ax
     ax.set_ylim(0, 100)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.invert_yaxis()
 
     plt.tight_layout()
     plt.show()
