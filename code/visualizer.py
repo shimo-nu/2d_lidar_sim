@@ -48,6 +48,7 @@ def visualize_path(sorted_coordinates):
     plt.ylabel("Y")
     plt.title("Optimized Path")
     plt.grid(True)
+    plt.savefig("image/optim_path.png")
     plt.show()
     
 def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="" , axis_option=False):
@@ -85,4 +86,5 @@ def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="" , ax
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     plt.tight_layout()
+    plt.savefig("image/scan_results.png")
     plt.show()

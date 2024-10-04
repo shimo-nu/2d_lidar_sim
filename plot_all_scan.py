@@ -71,7 +71,7 @@ def main():
         plot_final_map(ogm, new_mapinfo, human_list, robot_position, [40, 100], ax, visible_nodes_id)
 
     plt.tight_layout()
-    plt.savefig("combined_scan_results.png")
+    plt.savefig("image/combined_scan_results.png")
     plt.show()
 
 if __name__ == "__main__":
