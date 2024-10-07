@@ -1,6 +1,14 @@
 import matplotlib.pyplot as plt
 from matplotlib import patches
 from matplotlib.ticker import MaxNLocator
+import os
+
+def get_next_log_index(directory="image", prefix="optim_path", extension=".png"):
+    """ディレクトリ内の既存ファイル数に基づき、次のファイルインデックスを取得"""
+    if not os.path.exists(directory):
+        return 0  # ディレクトリが存在しなければ0を返す
+    existing_files = [f for f in os.listdir(directory) if f.startswith(prefix) and f.endswith(extension)]
+    return len(existing_files)
 
 def extract_and_visualize(optimal_path, grid_nodes):
     """
@@ -48,10 +56,11 @@ def visualize_path(sorted_coordinates):
     plt.ylabel("Y")
     plt.title("Optimized Path")
     plt.grid(True)
-    plt.savefig("image/optim_path.png")
-    plt.show()
+    os.makedirs("image", exist_ok=True)
+    index = get_next_log_index("image", "optim_path", ".png")
+    plt.savefig(f"image/optim_path{index}.png")
     
-def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="" , axis_option=False):
+def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="", axis_option=False):
     fig, ax = plt.subplots()
     data_size = data.shape
 
@@ -86,5 +95,6 @@ def plot_vis(data, grid_nodes, pos, agent_list=None, mapinfo=None, title="" , ax
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     plt.tight_layout()
-    plt.savefig("image/scan_results.png")
-    plt.show()
+    os.makedirs("image", exist_ok=True)
+    index = get_next_log_index("image", "scan_results", ".png")
+    plt.savefig(f"image/scan_results{index}.png")

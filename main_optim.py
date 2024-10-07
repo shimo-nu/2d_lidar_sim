@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from utils import makeWall
 
 AGENT_POSITIONS = [[70, 50, 0], [40, 50, 0], [80, 45, np.pi/4], [35, 20, np.pi/2], [65, 30, np.pi/3], [80, 30, np.pi/2]]
-NODE_GRID = 17 #[1m]
-NODE_INTERVAL = 6 #[1m]
-OPTIM_TIME = 600 * 30 #[1200s]
+NODE_GRID = 10 #[1m]
+NODE_INTERVAL = 10 #[1m]
+OPTIM_TIME = 300 * 24 #[300s]
 MAX_NODE = 20
 WEIGHT = 10
 INIT_ROBOT = None
@@ -33,6 +33,8 @@ def main():
     # 最適化計算
     optimizer = Optimizer(time_limit=OPTIM_TIME)
     optimal_path = optimizer.simultaneous_optimization(map_manager.all_visible_nodes_id, grid_nodes, total_nodes=len(grid_nodes), max_nodes=MAX_NODE, weight=WEIGHT, initial_id=INIT_ROBOT)
+    optimizer.visualize_optimization_log()
+
     for t, i in optimal_path:
         print(f"Time: {t}, Node id: {i}, pos: {grid_nodes[i]}")
 

@@ -1,0 +1,188 @@
+[
+    {
+        "type": "MIPSOL",
+        "objective": 649.3,
+        "runtime": 9.888558864593506,
+        "objective_best": 1e+100,
+        "objective_bound": 0.0,
+        "node_count": 0.0,
+        "solution_count": 0,
+        "x_values": {
+            "x[85,84]": 1.0,
+            "x[86,99]": 1.0,
+            "x[87,6]": 1.0,
+            "x[88,98]": 1.0,
+            "x[89,9]": 1.0,
+            "x[90,97]": 1.0,
+            "x[91,64]": 1.0,
+            "x[92,96]": 1.0,
+            "x[93,95]": 1.0,
+            "x[94,94]": 1.0,
+            "x[95,93]": 1.0,
+            "x[96,92]": 1.0,
+            "x[97,91]": 1.0,
+            "x[98,90]": 1.0,
+            "x[99,0]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 200.85,
+        "runtime": 12.294961929321289,
+        "objective_best": 649.3,
+        "objective_bound": 0.0,
+        "node_count": 0.0,
+        "solution_count": 1,
+        "x_values": {
+            "x[93,95]": 1.0,
+            "x[94,94]": 1.0,
+            "x[95,93]": 1.0,
+            "x[96,83]": 1.0,
+            "x[97,91]": 1.0,
+            "x[98,5]": 1.0,
+            "x[99,0]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 112.85,
+        "runtime": 13.040781021118164,
+        "objective_best": 200.85000000000002,
+        "objective_bound": 0.0,
+        "node_count": 0.0,
+        "solution_count": 2,
+        "x_values": {
+            "x[93,95]": 1.0,
+            "x[94,94]": 1.0,
+            "x[95,93]": 1.0,
+            "x[96,83]": 1.0,
+            "x[97,44]": 1.0,
+            "x[98,15]": 1.0,
+            "x[99,5]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 105.21,
+        "runtime": 24.193097829818726,
+        "objective_best": 112.85000000000001,
+        "objective_bound": 0.0,
+        "node_count": 39.0,
+        "solution_count": 3,
+        "x_values": {
+            "x[95,93]": 1.0,
+            "x[96,85]": 1.0,
+            "x[97,44]": 1.0,
+            "x[98,15]": 1.0,
+            "x[99,5]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 100.04,
+        "runtime": 24.202215909957886,
+        "objective_best": 105.21000000000001,
+        "objective_bound": 0.0,
+        "node_count": 40.0,
+        "solution_count": 4,
+        "x_values": {
+            "x[95,93]": 1.0,
+            "x[96,65]": 1.0,
+            "x[97,44]": 1.0,
+            "x[98,15]": 1.0,
+            "x[99,5]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 87.49000000000001,
+        "runtime": 24.21147084236145,
+        "objective_best": 100.04,
+        "objective_bound": 0.0,
+        "node_count": 53.0,
+        "solution_count": 5,
+        "x_values": {
+            "x[96,53]": 1.0,
+            "x[97,44]": 1.0,
+            "x[98,56]": 1.0,
+            "x[99,5]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 81.62,
+        "runtime": 24.222996950149536,
+        "objective_best": 87.49000000000001,
+        "objective_bound": 0.0,
+        "node_count": 57.0,
+        "solution_count": 6,
+        "x_values": {
+            "x[95,75]": 1.0,
+            "x[96,74]": 1.0,
+            "x[97,44]": 1.0,
+            "x[98,15]": 1.0,
+            "x[99,5]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 70.0,
+        "runtime": 24.703571796417236,
+        "objective_best": 81.62,
+        "objective_bound": 0.0,
+        "node_count": 112.0,
+        "solution_count": 7,
+        "x_values": {
+            "x[95,64]": 1.0,
+            "x[96,65]": 1.0,
+            "x[97,25]": 1.0,
+            "x[98,15]": 1.0,
+            "x[99,5]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 62.36,
+        "runtime": 28.840770959854126,
+        "objective_best": 70.0,
+        "objective_bound": 0.0,
+        "node_count": 170.0,
+        "solution_count": 8,
+        "x_values": {
+            "x[96,65]": 1.0,
+            "x[97,64]": 1.0,
+            "x[98,34]": 1.0,
+            "x[99,26]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 58.28,
+        "runtime": 44.77397394180298,
+        "objective_best": 62.36,
+        "objective_bound": 0.0,
+        "node_count": 217.0,
+        "solution_count": 9,
+        "x_values": {
+            "x[96,25]": 1.0,
+            "x[97,34]": 1.0,
+            "x[98,64]": 1.0,
+            "x[99,75]": 1.0
+        }
+    },
+    {
+        "type": "MIPSOL",
+        "objective": 58.28,
+        "runtime": 1635.3323769569397,
+        "objective_best": 58.28,
+        "objective_bound": 58.28,
+        "node_count": 6375577.0,
+        "solution_count": 10,
+        "x_values": {
+            "x[96,25]": 1.0,
+            "x[97,34]": 1.0,
+            "x[98,64]": 1.0,
+            "x[99,75]": 1.0
+        }
+    }
+]
