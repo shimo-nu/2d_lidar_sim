@@ -9,9 +9,9 @@ class Optimizer:
     @staticmethod
     def calculate_distance(point1, point2):
         """2点間の距離を小数点以下3桁まで計算"""
-        return round(math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2), 3)
+        return round(math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2), 2)
 
-    def simultaneous_optimization(self, visible_nodes_id, grid_nodes, total_nodes):
+    def simultaneous_optimization(self, visible_nodes_id, grid_nodes, total_nodes, max_nodes, weight, initial_id=None):
         """Gurobiを使った最適化処理"""
 
         print("Create OptimModel")
@@ -25,23 +25,18 @@ class Optimizer:
         # 距離計算
         distances = {(i, j): self.calculate_distance(grid_nodes[i], grid_nodes[j]) for i in range(total_nodes) for j in range(total_nodes) if i != j}
 
-        # 目的関数: 移動距離の最小化
-        # m.setObjective(
-        #     gp.quicksum(x[t, i] * x[t+1, j] * distances[i, j] for t in range(total_nodes-1) for i in range(total_nodes) for j in range(total_nodes) if i != j),
-        #     GRB.MINIMIZE
-        # )
+        # 移動距離の最小化の目的関数の部分
+        objective_distance = gp.quicksum(x[t, i] * x[t + 1, j] * distances[i, j] 
+                                        for t in range(total_nodes - 1) 
+                                        for i in range(total_nodes) 
+                                        for j in range(total_nodes) if i != j)
 
-        # 目的関数: 移動距離の最小化
-        quad_expr = gp.QuadExpr()
-        for t in range(total_nodes - 1):
-            for i in range(total_nodes):
-                for j in range(total_nodes):
-                    if i != j:
-                        # 各ステップの進行状況を表示
-                        print(f"Adding to quad_expr: t={t}, i={i}, j={j}, distance={distances[i, j]}")
-                        quad_expr += x[t, i] * x[t+1, j] * distances[i, j]
-        
-        m.setObjective(quad_expr, GRB.MINIMIZE)
+        # ノード数を少なくするための目的関数の項
+        objective_nodes = gp.quicksum(x[t, i] for t in range(total_nodes) for i in range(total_nodes))
+
+        # 目的関数に両方の項を組み込む
+        # m.setObjective(objective_distance + weight * objective_nodes, GRB.MINIMIZE)
+        m.setObjective(objective_distance, GRB.MINIMIZE)
 
         # 制約条件: 各時刻 t に 1 つ以下のノードにのみいる
         m.addConstrs(gp.quicksum(x[t, i] for i in range(total_nodes)) <= 1 for t in range(total_nodes))
@@ -58,6 +53,32 @@ class Optimizer:
             if covering_constr:
                 m.addConstr(gp.quicksum(covering_constr) >= 1, name=f"cover_{j}")
 
+        # 全体で訪問するノード数を制限する制約
+        m.addConstr(
+            gp.quicksum(x[t, i] for t in range(total_nodes) for i in range(total_nodes)) <= max_nodes, 
+            name="max_total_nodes"
+        )
+
+        # 初期位置の制約: initial_id が指定されている場合に限り制約を追加
+        if initial_id is not None:
+            print(f"Initial ID exists: {initial_id}, position: {grid_nodes[initial_id]}")
+
+            first_visit = m.addVars(total_nodes, vtype=GRB.BINARY, name="first_visit")
+
+            # 強制的に1が立つようにする
+            m.addConstr(gp.quicksum(first_visit[t] for t in range(total_nodes)) == 1, name="unique_first_visit")
+
+            # 初めて訪れる時刻に1が立つことを保証
+            for t in range(total_nodes):
+                m.addConstr(x[t, initial_id] == first_visit[t], name=f"first_visit_{t}")
+
+            # first_visit の時刻よりも前のすべての時刻で、どのノードも訪問しない（すべて0）
+            for t in range(total_nodes):
+                m.addConstr(
+                    gp.quicksum(x[tt, i] for tt in range(t) for i in range(total_nodes)) <= (1 - first_visit[t]) * total_nodes,
+                    name=f"no_visit_before_first_visit_{t}"
+            )   
+                
         print("Finish Create OptimModel")
         print("Start Optimize!")
         m.optimize()
