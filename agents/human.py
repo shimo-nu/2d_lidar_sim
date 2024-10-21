@@ -1,4 +1,5 @@
 import os, sys
+sys.path.append(os.pardir)
 
 import random
 import datetime
@@ -12,68 +13,14 @@ from dataclasses import dataclass
 from utils import generate_pseudo_trajectory, calculate_smooth_angle, makeHumanPath
 from agents.agent import Agent
 from debug import debug_print
+import rvo2
 
 class HumanManager():
-    
-    # Basic Agent (No move & Random Walk & RVO2)
-    # org 後で消す
-    # human_list = None
-    # if (args.agent_mode == 'RVO2' or args.agent_mode == 'nomove'):
-    #     pattern_num = 1
-    #     agent_objects_by_pattern = dict()
-    #     for pattern_name, agent_positions in agent_positions_by_pattern.items():
-    #         agent_objects = []
-    #         agent_pass_list = makeHumanPath(len(agent_positions), settings.steps + 1, wall, pos_list_args=agent_positions, radius=10, neighborDist=20)
-    #         agent_pass_by_pattern[pattern_name] = agent_pass_list
-    #         # else:
-    #         #     agent_pass_list = agent_pass_by_pattern[pattern]
-    #         #     agent_pass_list
-    #         agent_keys = list(agent_pass_list.keys())
-    #         print(agent_keys)
-    #         for idx, agent_position in enumerate(agent_positions):
-    #             yaw = 0
-    #             if (len(agent_position) == 3):
-    #                 yaw = agent_position[2]
-    #             ## RVO2Human
-    #             # agent = RVO2Human(name="smagv" + str(idx) + pattern, position=agent_position[:2], personalspace=10, size = 5,agent_info={"rx": 3, "ry": 1.5, "rad":yaw}, unique_num=int("{}{}".format(pattern_num, idx)))
-    #             # agent = Agent(name="smagv" + str(idx) + pattern_name, position=agent_position[:2], personalspace=10, size = 5,agent_info={"rx":3, "ry": 1.5, "rad":yaw}, unique_num=int("{}{}".format(pattern_num, idx)))
-    #             agent = RVO2Human(name="smagv" + str(idx) + pattern, position=agent_position, personalspace=10, size = 5,agent_info={"rx":3, "ry": 1.5, "rad":yaw}, unique_num=int("{}{}".format(pattern_num, idx)))
-    #             agent.setPath(agent_pass_list[agent_keys[idx]])
-
-
-    #             agent.isStarted = True
-    #             agent_objects.append(agent)
-    #         agent_objects_by_pattern[pattern_name] = agent_objects
-    #         pattern_num += 1
-    #     human_list = agent_objects_by_pattern[pattern]
-    # elif (args.agent_mode == 'centrair'):
-    #     # Centrair Agent
-    #     human_list = []
-    #     console.log("[Preparing] Initiating Human Instance...")
-    #     with open(os.path.join(DATADIR, "master.centrair.pkl"), 'rb') as f:
-    #         human_dict = pickle.load(f)
-    #     # min_time = min([human_dict[human_key].loc_history[0][0]
-    #     #                for human_key in human_dict])
-    #     for idx, human_key in enumerate(human_dict):
-    #         # if (idx > settings.people_maxnum):
-    #         #     break
-    #         if (len(human_list) > settings.people_maxnum):
-    #             break
-    #         converted_path_by_affinematrix = convertPathWithAffineMatrix(human_dict[human_key].loc_history, settings.affine_matrix)
-    #         try:
-    #             converted_path = deleteDuplicatePoint(converted_path_by_affinematrix)
-    #             _human = CentrairHuman(name=human_dict[human_key].id, path=converted_path, personalspace=10, color="C" + str(idx + 1), affine_matrix=settings.affine_matrix, agent_info={"rx": 0.5, "ry": 0.3, "rad":np.pi/4}, unique_num=human_key)
-    #             human_list.append(_human)
-    #         except Exception as e:
-    #             print(e)
-    #             pass
-    #     min_time = min([human.path[0][0]
-    #            for human in human_list])
-    #     for human in human_list:
-    #         human.setStartTime(min_time)
     def __init__(self):
         self.human_list = []
         self.human_name_index = {}
+        
+        self.mode = ''
         
     def __len__(self):
         return len(self.human_list)
@@ -89,7 +36,19 @@ class HumanManager():
     def loadPickle(self, pickle_path):
         with open(pickle_path, 'rb') as f:
             self.human_list = pickle.load(f)
-
+            
+    def move(self, step):
+        human_pose_list = {}
+        for human in self.human_list:
+            human_pose = []
+            if (not human.isArrived and human.isStarted):
+                human_pose = list(human.position)
+            human.move()
+            human_pose_list[human.unique_num] = human_pose
+            
+        if (self.mode == 'RVO2'):
+            self.sim.doStep()
+        return human_pose_list
     def nomove(self, agent_positions):
         for idx, agent_position in enumerate(agent_positions):
             try:
@@ -101,18 +60,91 @@ class HumanManager():
                 debug_print("IndexError : so we skip this agent")
                 debug_print(agent_position)
 
-    def rvo2move(self, agent_positions, wall, steps, pattern, pattern_num):
-        agent_pass_list = makeHumanPath(len(agent_positions), steps + 1, wall, pos_list_args=agent_positions, radius=10, neighborDist=20)
-        agent_keys = list(agent_pass_list.keys())
+    def rvo2move(self, step, r):
+        human_pose_list = {}
+        for human in self.human_list:
+            human_pose = []
+            if (not human.is_arrived and human.is_started):
+                human_pose = list(human.position)
+                human_pose.append(float(human.agent_info['rad']))
+            human.move()
+            human_pose_list[human.unique_num] = human_pose
+        self.sim.doStep()
+        return human_pose_list
+    
+    def rvo2setup(self, agent_positions, neighbour_target=None,wall=None, steps=None, pattern=None, pattern_num=None):
+        # あらかじめパスを指定する場合
+        # agent_pass_list = makeHumanPath(len(agent_positions), steps + 1, wall, pos_list_args=agent_positions, radius=10, neighborDist=20)
+        # agent_keys = list(agent_pass_list.keys())
+        # for idx, agent_position in enumerate(agent_positions):
+        #     yaw = 0
+        #     if (len(agent_position) == 3):
+        #         yaw = agent_position[2]
+            
+        #     agent = RVO2Human(name="smagv" + str(idx) + pattern, position=agent_position, personalspace=10, size = 5,agent_info={"rx":3, "ry": 1.5, "rad":yaw}, unique_num=int("{}{}".format(pattern_num, idx)))
+        #     agent.setPath(agent_pass_list[agent_keys[idx]])
+        #     self.human_list[agent_keys[idx]] = agent
+        
+        self.mode = 'RVO2'
+        
+        # 毎ステップシミュレートする場合
+        self.sim = rvo2.PyRVOSimulator(10.0, 30.0, 6, 15.0, 20.0, 3.0, 10)
+        
+        facing_directions = {}
+        positions_and_directions = []
+
+        # エージェントの作成
         for idx, agent_position in enumerate(agent_positions):
-            yaw = 0
-            if (len(agent_position) == 3):
-                yaw = agent_position[2]
-            
-            agent = RVO2Human(name="smagv" + str(idx) + pattern, position=agent_position, personalspace=10, size = 5,agent_info={"rx":3, "ry": 1.5, "rad":yaw}, unique_num=int("{}{}".format(pattern_num, idx)))
-            agent.setPath(agent_pass_list[agent_keys[idx]])
-            self.human_list[agent_keys[idx]] = agent
-            
+            agent = None
+            if idx < 8:
+            # 最初の8人はほぼneighbour_targetを見ている状態
+                agent = RVO2Human(
+                    name=f"rvo2_human_{idx}",
+                    sim=self.sim,
+                    personalspace=10,
+                    size=5,
+                    agent_info={"rx": 3, "ry": 1.5, "rad": agent_position[2]},
+                    unique_num=int(f"{idx}"),
+                    position=agent_position,
+                    neighbour_target=neighbour_target + np.array([random.uniform(-10, 10), random.uniform(-10, 10)]),
+                    gaze_prob_offset=10,
+                    satisfy_gazeing_a_offset=random.randint(300, 500)
+                )
+            elif 8 <= idx < 13:
+                # 次の5人は途中からneighbour_targetを見るように設定
+                agent = RVO2Human(
+                    name=f"rvo2_human_{idx}",
+                    sim=self.sim,
+                    personalspace=10,
+                    size=5,
+                    agent_info={"rx": 3, "ry": 1.5, "rad": agent_position[2]},
+                    unique_num=int(f"{idx}"),
+                    position=agent_position,
+                    neighbour_target=neighbour_target + np.array([random.uniform(-10, 10), random.uniform(-10, 10)]),
+                    gaze_prob_offset=random.uniform(40, 90),
+                    satisfy_gazeing_a_offset=random.randint(150, 200)
+                )
+            else:
+                # 残りは何も見ずにdestinationに向かう、見ている人たちの後ろを素通りする経路を設定
+                destination = np.array([agent_position[0] + random.uniform(-5, 5), agent_position[1] + 50])  # 後ろを素通りするような目的地設定
+                agent = RVO2Human(
+                    name=f"rvo2_human_{idx}",
+                    sim=self.sim,
+                    personalspace=10,
+                    size=5,
+                    agent_info={"rx": 3, "ry": 1.5, "rad": agent_position[2]},
+                    unique_num=int(f"{idx}"),
+                    position=agent_position,
+                    destination=destination,
+                    neighbour_target=None,
+                    gaze_prob_offset=100
+                )
+            agent.isArrived = False
+            agent.isStarted = True
+            self.human_list.append(agent)
+            self.human_name_index[f"{idx}"] = len(self.human_list) - 1
+            facing_directions[agent.sim_agent] = agent_position[2]
+        
     
     def centrairmove():
         pass
@@ -181,9 +213,149 @@ class RandomSeedHuman(RandomHuman):
         except IndexError:
             raise IndexError("weird count")
         self.cnt += 1
-
+        
 
 class RVO2Human(Agent):
+    def __init__(self, name, sim, position, velocity="0", path=[],  personalspace=0,size = 10,color="k", agent_info = {}, unique_num=-1, dt = 0.1, destination=None, neighbour_target=None, gaze_prob_offset=70, satisfy_gazeing_a_offset=None, neighbour_target_prob=0.3, gaze_time_prob_range=(0, 0.5)):
+        super().__init__(name, velocity, path, position, personalspace, size, color, agent_info, unique_num, dt)
+        self.name = name
+        self.sim = sim
+        self.agent_id = unique_num
+        self.position = np.array(position)
+        self.state = -1  # 初期状態を0に設定
+        self.step = 0
+        self.gaze_time = 0
+        self.active_step = random.randint(0, 50)
+        self.gaze_prob_offset = gaze_prob_offset
+        self.satisfy_gazeing_a_offset = random.randint(70, 80) if satisfy_gazeing_a_offset is None else satisfy_gazeing_a_offset
+        self.neighbour_target_prob = neighbour_target_prob
+        self.gaze_time_prob = random.uniform(*gaze_time_prob_range)
+                
+        self.is_satisfy_position = False
+        self.is_statisfy_gazing_a = False
+        self.is_already_gaze_target = False
+        self.is_arrived = False
+        
+        self.sim_agent = sim.addAgent(tuple(self.position[:2]))
+        
+        self.destination = destination if destination is not None else np.array([random.uniform(-50, 130), random.uniform(-50, 130)])
+        self.neighbour_target = neighbour_target 
+        self.facing_direction = position[2]  # 初期の向き
+        self.movement_direction = position[2]  # 初期の移動方向を向きと同じに設定
+
+    def move(self):
+        if self.state == 0:
+            self.goDestination()
+        elif self.state == 1:
+            self.gazeTarget()
+        elif self.state == 2:
+            self.is_arrived = True
+        elif self.state == 3:
+            self.goNeighbourTarget()
+
+        self.position = [*self.sim.getAgentPosition(self.sim_agent), self.movement_direction + np.pi / 2]
+
+        self.changestate()
+        self.step += 1
+        
+
+    def goDestination(self):
+        # 目的地に向かって移動
+        current_position = np.array(self.sim.getAgentPosition(self.sim_agent))
+        direction = self.destination - current_position
+        distance = np.linalg.norm(direction)
+        if distance < 5.0:
+            # 目的地に到着
+            self.is_satisfy_position = True
+            self.sim.setAgentPrefVelocity(self.sim_agent, (0.0, 0.0))
+        else:
+            velocity = direction / distance * 0.1 # 正規化
+            self.sim.setAgentPrefVelocity(self.sim_agent, tuple(velocity))
+
+    def goNeighbourTarget(self):
+        # 路上パフォーマンスを行うターゲットに向かって移動
+        if self.neighbour_target is None:
+            current_position = np.array(self.sim.getAgentPosition(self.sim_agent))
+            self.neighbour_target = current_position + np.array([random.uniform(-5, 5), random.uniform(-5, 5)])
+        current_position = np.array(self.sim.getAgentPosition(self.sim_agent))
+        direction = self.neighbour_target - current_position
+        distance = np.linalg.norm(direction)
+
+        # ターゲットの周囲15単位以内には近づかない
+        min_distance_to_target = 20.0
+        if distance < min_distance_to_target:
+            # ターゲットに近づきすぎた場合は停止
+            print(f"Too close to Neighbour Target: pose {current_position}, target {self.neighbour_target}, distance {distance}")
+            self.is_satisfy_position = True
+            self.sim.setAgentPrefVelocity(self.sim_agent, (0.0, 0.0))
+            return
+   
+        # 距離に応じて確率を計算
+        max_distance = 30.0  # 最大距離（調整可能）
+        distance_ratio = min(distance / max_distance, 1.0)
+        stop_probability = 1.0 - distance_ratio  # 距離が近いほど確率が高くなる
+
+        if random.random() < stop_probability:
+            # 確率的に停止
+            print(f"Arrive Neighbour: pose {current_position}, target {self.neighbour_target}, distance {distance}")
+            self.is_satisfy_position = True
+            self.sim.setAgentPrefVelocity(self.sim_agent, (0.0, 0.0))
+        else:
+            velocity = direction / distance * 0.1 # 正規化
+            self.sim.setAgentPrefVelocity(self.sim_agent, tuple(velocity))
+
+    def gazeTarget(self):
+        self.is_already_gaze_target = True
+        # その場に留まる
+        self.sim.setAgentPrefVelocity(self.sim_agent, (0.0, 0.0))
+        
+        self.gaze_time += 1
+        temp_prob = random.random()
+        adjusted_function = self.adjustedFunction(self.gaze_time, self.satisfy_gazeing_a_offset)
+        if (temp_prob <= adjusted_function):
+            print(f"Satisfy gazing a : prob {temp_prob}, adjusted_function {adjusted_function}, gaze_time {self.gaze_time}")
+            self.gaze_time = 0
+            self.is_statisfy_gazing_a = True
+            self.gaze_prob_offset = 100
+
+    @staticmethod
+    def adjustedFunction(x, offset):
+        # x が小さい場合は 0 に近く、大きくなると 1 に近づく関数
+        y = 1 / (1 + np.exp(-0.5 * (x - offset)))
+        return y
+
+    def changestate(self):
+        if self.state == -1:
+            if (self.step >= self.active_step):
+                self.state = 0
+        elif self.state == 0:
+            # 注視するかどうかを判断
+            if (random.random() < self.adjustedFunction(self.step, self.gaze_prob_offset)) and (not self.is_already_gaze_target):
+                self.state = 3  # 近陽のターゲットに移動
+                self.is_satisfy_position = False
+            if (self.is_satisfy_position):
+                self.state = 2
+        elif self.state == 3:
+            # 位置が満たされたか確認
+            if self.is_satisfy_position:
+                self.state = 1  # 注視を開始
+                self.gaze_time = 0
+                self.is_statisfy_gazing_a = False
+        elif self.state == 1:
+            if not self.is_satisfy_position:
+                self.state = 3  # 再度近陽のターゲットへ移動
+            elif self.is_statisfy_gazing_a:
+                self.state = 0  # 次の目的地へ
+                self.is_satisfy_position = False
+
+    def update_movement_direction(self):
+        velocity = self.sim.getAgentVelocity(self.sim_agent)
+        if np.linalg.norm(velocity) > 0:
+            self.movement_direction = np.arctan2(velocity[1], velocity[0])
+            self.facing_direction = self.movement_direction
+
+# RVO2であらかじめ指定したパスを通る場合のクラス
+class RVO2HumanOld(Agent):
 
     def setPath(self, path):
         self.path = path
