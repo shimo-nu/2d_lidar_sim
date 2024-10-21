@@ -4,3 +4,7 @@ scipy
 joblib
 joblib
 rich
+cmake
+setuptools
+wheel
+Cython
