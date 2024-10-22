@@ -14,6 +14,9 @@ import lidar_to_grid_map as lg
 import joblib
 from joblib import cpu_count
 
+from numba import jit
+
+
 
 def stop_watch(func):
     @wraps(func)
@@ -67,9 +70,9 @@ def calcLinear(p1, p2):
     return a, b, c
 
 
+@jit(nopython=True, cache=True)
 def calcEuclidean(p1, p2):
-    return math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]))
-
+    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
 def isPointInArea(point_list, area_center, area_dis):
     result = np.full(len(point_list), False)
@@ -152,9 +155,13 @@ def plot(data, fig, ax, agent_list = None,dst = None, now = None,title = "", map
     
     
     data_plot = ax.imshow(data, cmap="Purples",  vmin=0, vmax=1,origin='upper', extent=[0,data_size[0], data_size[1], 0],interpolation='none', alpha=1)
-    if (agent_list is None):
+    if (agent_list is not None):
         for agent in agent_list:
-            ax.plot(agent.position[0], agent.position[1],  c="#42F371", marker=".", markersize=20)
+            # ax.plot(agent.position[0], agent.position[1],  c="#42F371", marker=".", markersize=20)
+            h = patches.Circle(agent.position[0:2], agent.agent_info['ry'] - 0.1, facecolor="#42F371", edgecolor="black")
+            e = patches.Ellipse(tuple(agent.position[0:2]), agent.agent_info['rx']*2, agent.agent_info['ry']*2, facecolor="white", edgecolor="black", angle=agent.position[2] * 180 / np.pi)
+            ax.add_patch(e)
+            ax.add_patch(h)
     
     # plt.grid(True, which="minor", color="w", linewidth=.6, alpha=0.5)
     if (grid_marks is not None):
@@ -564,94 +571,101 @@ def sample_rotated_ellipse_points(center, rx, ry, angle, num_points=100):
     return list(zip(x_rotated_points, y_rotated_points))
 
 
+
 def one_azimuth_scan(ogm_info, mapinfo, robot_position, target_point, agent_list, lidar_radius):
     ogm_data = np.ones((ogm_info["size"][0], ogm_info["size"][1]))
-    ogm = OccupancyGridMap(ogm_data, 1)
-
-    # Find intersection point with walls
-    occulusion_agent_list = []
     cross_map_wall_point = target_point
 
+    # Precompute robot position for Bresenham
+    robot_position_ru = [int(decimal_round(robot_position[0])) - 1, int(decimal_round(robot_position[1])) - 1]
+    
+    # Vectorize Euclidean distance calculation for map wall points
+    map_points = np.array([mapinfo[idx - 1:idx + 1] for idx in range(1, len(mapinfo))])
+    distances = np.linalg.norm(map_points[:, 0] - map_points[:, 1], axis=1)
+    occulusion_agent_list = []
+    # Fast intersection check with walls
     for idx_mapinfo in range(1, len(mapinfo)):
         wall_start = mapinfo[idx_mapinfo - 1]
         wall_end = mapinfo[idx_mapinfo]
-        is_intersect = isIntersect(
-            robot_position, target_point, wall_start, wall_end)
-        if (is_intersect and target_point[0] > 0 and target_point[1] > 0):
-            try:
-                _cross_map_wall_point = line_cross_point(
-                    robot_position, target_point, wall_start, wall_end)
-                if (_cross_map_wall_point is None):
-                    continue
-                elif (cross_map_wall_point == target_point or calcEuclidean(robot_position, _cross_map_wall_point) <= calcEuclidean(robot_position, cross_map_wall_point)):
-                    cross_map_wall_point = _cross_map_wall_point
-            except:
-                # print("robot_pos : {}".format(robot_position))
-                # print("target_pos : {}".format(target_point))
-                # print("first_point : {}".format(first_point))
-                # print("second_point : {}".format(second_point))
-                # print("mapinfo : {}".format(mapinfo))
-                pass
-
-
-    # Find occluding agent
-
-    # try:
-    robot_position_ru = [int(decimal_round(robot_position[0])), int(decimal_round(robot_position[1]))]
-
-    cross_map_wall_point_ru = [int(decimal_round(cross_map_wall_point[0]))- 1, int(decimal_round(cross_map_wall_point[1])) - 1]
-    try:
-        laser_beams = lg.bresenham(
-            robot_position_ru, cross_map_wall_point_ru)
-    except Exception as e:
-        print("cross_point : {}, robot_position : {}, cmwallpt : {}, target : {}".format(cross_map_wall_point, robot_position, cross_map_wall_point, target_point))
-        print(type(robot_position_ru[0]))
-        print(type(robot_position_ru[1]))
-        print(type(cross_map_wall_point_ru[0]))
-        print(type(cross_map_wall_point_ru[0]))
-        print(str(e))
-        import sys
-        sys.exit(1)
+        is_intersect = isIntersect(robot_position, target_point, wall_start, wall_end)
+        
+        if is_intersect and target_point[0] > 0 and target_point[1] > 0:
+            _cross_map_wall_point = line_cross_point(robot_position, target_point, wall_start, wall_end)
+            if _cross_map_wall_point is not None and calcEuclidean(robot_position, _cross_map_wall_point) < calcEuclidean(robot_position, cross_map_wall_point):
+                cross_map_wall_point = _cross_map_wall_point
+    
+    # Compute laser beams
+    cross_map_wall_point_ru = [int(decimal_round(cross_map_wall_point[0])), int(decimal_round(cross_map_wall_point[1]))]
+    laser_beams = lg.bresenham(robot_position_ru, cross_map_wall_point_ru)
+    
     occulusion_agent = [10000, None]
-    isOcculusion_laser_beams = [False for i in range(len(laser_beams))]
-    for agent in agent_list:
-        # if (not agent.isStarted or agent.isArrived):
-        if (not agent[1] or agent[0]):
-            continue
-            
-        # checkOcculusion = [calcEuclidean(agent[2], laser_beam) < (
-            # agent[3]) for laser_beam in laser_beams]
-        ellipse = {'center' : agent[2], 'rx' : agent[5]['rx'], 'ry' : agent[5]['ry'], 'rad' : agent[5]['rad']}
-        checkOcculusion = [is_inside_ellipse(laser_beam, ellipse) for laser_beam in laser_beams]
-        if any(checkOcculusion):
-            isOcculusion_laser_beams = [x | y for x, y in zip(
-                isOcculusion_laser_beams, checkOcculusion)]
-            occ_idx = checkOcculusion.index(True)
-            if (occ_idx < occulusion_agent[0] and calcEuclidean(agent[2], robot_position) < lidar_radius):
-                occulusion_agent[0] = occ_idx
-                occulusion_agent[1] = agent[4]
-
-    laser_point_list = laser_beams
-    if any(isOcculusion_laser_beams):
-        lb_idx = isOcculusion_laser_beams.index(True)
-        laser_point_list = laser_beams[:lb_idx]
-
-        if occulusion_agent[1] is not None and occulusion_agent[1] not in occulusion_agent_list:
+    isOcculusion_laser_beams = np.zeros(len(laser_beams), dtype=bool)
+    
+    # Filter out agents that are too far from the robot or inactive
+    relevant_agents = [agent for agent in agent_list if agent[1] and calcEuclidean(agent[2], robot_position) < lidar_radius]
+    
+    # Parallelize occlusion checks (if needed)
+    for agent in relevant_agents:
+        ellipse = {'center': agent[2], 'rx': agent[5]['rx'], 'ry': agent[5]['ry'], 'rad': agent[5]['rad']}
+        
+        # Early exit if laser beam occlusion is detected
+        for i, laser_beam in enumerate(laser_beams):
+            if is_inside_ellipse(laser_beam, ellipse):
+                isOcculusion_laser_beams[i] = True
+                if i < occulusion_agent[0]:
+                    occulusion_agent[0] = i
+                    occulusion_agent[1] = agent[4]
+                break  # Break early once occlusion is detected
+    
+    # Trim the laser beam list if occlusion is found
+    if np.any(isOcculusion_laser_beams):
+        laser_point_list = laser_beams[:np.argmax(isOcculusion_laser_beams)]
+        if occulusion_agent[1] is not None:
             occulusion_agent_list.append(occulusion_agent[1])
-
+    else:
+        laser_point_list = laser_beams
+    
+    # Update occupancy grid with laser beam hits
     for laser_beam in laser_point_list:
-        if (calcEuclidean(laser_beam, robot_position) > lidar_radius or np.all(laser_beam == robot_position)):
+        if calcEuclidean(laser_beam, robot_position) > lidar_radius:
             continue
-        # if (laser_beam.tolist() in self.ogm.mapinfo):
-        #     break
         try:
-            ogm.set_data(laser_beam, 0)
-        except:
-            pass
+            ogm_data[laser_beam[1] - 1, laser_beam[0] - 1] = 0
+        except IndexError:
+            continue
+    
+    return ogm_data, occulusion_agent_list
 
 
-    # tm.result()
-    return ogm.data, occulusion_agent_list# , tm.getTime()
+# def lidar_scan(lidar_position, area_size, mapinfo, lidar_radius, agent_list):
+#     ogm_data = np.ones((area_size[0], area_size[1]))
+#     ogm = OccupancyGridMap(ogm_data, 1)
+#     _wall = makeWall(lidar_position, lidar_radius)
+#     human_unique_num_dict = {
+#         agent.unique_num: agent for agent in agent_list}
+
+#     ogm_info = {"size": area_size}
+
+
+#     agent_value_list = [[agent.isArrived, agent.isStarted, agent.position, agent.size, agent.unique_num, agent.agent_info] for agent in agent_list]
+
+#     results = joblib.Parallel(n_jobs=get_availble_cpus(0.8), verbose=0, backend='threading')(joblib.delayed(one_azimuth_scan)(
+#         ogm_info, mapinfo, lidar_position, point, agent_value_list, lidar_radius) for point in _wall)
+
+#     print("Lidar scan")
+
+
+#     # time = np.array([0., 0., 0.])
+#     measured_people = {}
+#     for result in results:
+#         ogm.data *= result[0]
+#         for _occulusion_agent in result[1]:
+#             if (_occulusion_agent not in measured_people):
+#                 measured_people[_occulusion_agent] = human_unique_num_dict[_occulusion_agent]
+#         # time += result[2]
+
+#     return ogm_data, list(measured_people.values())# , time
+
 
 def lidar_scan(lidar_position, area_size, mapinfo, lidar_radius, agent_list):
     ogm_data = np.ones((area_size[0], area_size[1]))
@@ -678,6 +692,7 @@ def lidar_scan(lidar_position, area_size, mapinfo, lidar_radius, agent_list):
     
     return ogm_data
 
+@jit(nopython=True, cache=True)
 def isIntersect(a, b, c, d):
             tc = (a[0] - b[0]) * (c[1] - a[1]) - (a[1] - b[1]) * (c[0] - a[0])
             td = (a[0] - b[0]) * (d[1] - a[1]) - (a[1] - b[1]) * (d[0] - a[0])
@@ -689,7 +704,14 @@ def isIntersect(a, b, c, d):
             if (tc * td > 0):
                 return False
             return True
+@jit(nopython=True, cache=True)
+def round_half_up(value):
+    if value > 0:
+        return int(value + 0.5)
+    else:
+        return int(value - 0.5)
 
+@jit(nopython=True, cache=True)
 def line_cross_point(P0, P1, Q0, Q1):
     x0, y0 = P0
     x1, y1 = P1
@@ -707,10 +729,13 @@ def line_cross_point(P0, P1, Q0, Q1):
 
     # s = sn/d
     sn = b2 * (x2-x0) - a2 * (y2-y0)
+    
+    x = x0 + a0 * sn / d
+    y = y0 + b0 * sn / d
     # t = tn/d
     # tn = b0 * (x2-x0) - a0 * (y2-y0)
-    return int(Decimal(str(x0 + a0*sn/d)).quantize(Decimal('0'), rounding=ROUND_HALF_UP)), int(Decimal(str(y0 + b0*sn/d)).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
-
+    # return int(Decimal(str(x0 + a0*sn/d)).quantize(Decimal('0'), rounding=ROUND_HALF_UP)), int(Decimal(str(y0 + b0*sn/d)).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
+    return round_half_up(x), round_half_up(y)
 
 
 def project_point(a, b, d):

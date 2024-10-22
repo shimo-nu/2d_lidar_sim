@@ -30,50 +30,59 @@ def file_read(f):
     distances = np.array(distances)
     return angles, distances
 
-
+from numba import jit
+@jit(nopython=True, cache=True)
 def bresenham(start, end):
     """
     Implementation of Bresenham's line drawing algorithm
-    See en.wikipedia.org/wiki/Bresenham's_line_algorithm
-    Bresenham's Line Algorithm
-    Produces a np.array from start and end (original from roguebasin.com)
-    >>> points1 = bresenham((4, 4), (6, 10))
-    >>> print(points1)
-    np.array([[4,4], [4,5], [5,6], [5,7], [5,8], [6,9], [6,10]])
+    Produces a np.array from start and end points.
     """
     # setup initial conditions
     x1, y1 = start
     x2, y2 = end
-    dx = x2 - x1
-    dy = y2 - y1
-    is_steep = abs(dy) > abs(dx)  # determine how steep the line is
-    if is_steep:  # rotate line
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    is_steep = dy > dx  # determine how steep the line is
+
+    # Rotate the line
+    if is_steep:
         x1, y1 = y1, x1
         x2, y2 = y2, x2
-    # swap start and end points if necessary and store swap state
+
+    # Swap start and end points if necessary
     swapped = False
     if x1 > x2:
         x1, x2 = x2, x1
         y1, y2 = y2, y1
         swapped = True
-    dx = x2 - x1  # recalculate differentials
-    dy = y2 - y1  # recalculate differentials
-    error = int(dx / 2.0)  # calculate error
+
+    dx = x2 - x1
+    dy = abs(y2 - y1)
+    error = dx // 2
     y_step = 1 if y1 < y2 else -1
-    # iterate over bounding box generating points between start and end
+
+    # Initialize y and points list
     y = y1
     points = []
+
     for x in range(x1, x2 + 1):
-        coord = [y, x] if is_steep else (x, y)
+        # Use tuples instead of lists to make Numba happy
+        coord = (y, x) if is_steep else (x, y)
         points.append(coord)
-        error -= abs(dy)
+        error -= dy
         if error < 0:
             y += y_step
             error += dx
-    if swapped:  # reverse the list if the coordinates were swapped
+
+    # Reverse the list if the coordinates were swapped
+    if swapped:
         points.reverse()
-    points = np.array(points)
-    return points
+
+    return np.array(points)
+
+# Example usage
+points = bresenham((4, 4), (6, 10))
+print(points)
 
 
 def calc_grid_map_config(ox, oy, xy_resolution):

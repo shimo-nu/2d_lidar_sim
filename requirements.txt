@@ -8,3 +8,4 @@ cmake
 setuptools
 wheel
 Cython
+numba
