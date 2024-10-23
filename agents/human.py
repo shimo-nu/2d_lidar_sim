@@ -33,7 +33,7 @@ class HumanManager():
     def get(self, name):
         return self.human_list[self.human_name_index[name]]
         
-    def loadPickle(self, pickle_path):
+    def loadpickle(self, pickle_path):
         with open(pickle_path, 'rb') as f:
             self.human_list = pickle.load(f)
             
@@ -71,6 +71,17 @@ class HumanManager():
             human_pose_list[human.unique_num] = human_pose
         self.sim.doStep()
         return human_pose_list
+    
+    def fixpathsetup(self, agent_path_list):
+        for agent_id, agent_path in agent_path_list.items():
+            agent_path = list(agent_path.values())
+            print(f"{agent_path}\n")
+            agent = Agent(name=f"agent{agent_id}", path=agent_path, position=agent_path[:2], agent_info={"rx": 3, "ry": 1.5, "rad": agent_path[2]}, personalspace=10, size = 5, unique_num=int("{}".format(agent_id))
+            )
+            agent.isArrived = False
+            agent.isStarted = True
+            self.human_list.append(agent)
+            self.human_name_index[f"{agent_id}"] = len(self.human_list) - 1
     
     def rvo2setup(self, agent_positions, neighbour_target=None,wall=None, steps=None, pattern=None, pattern_num=None):
         # あらかじめパスを指定する場合
