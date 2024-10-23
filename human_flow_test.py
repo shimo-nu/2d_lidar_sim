@@ -33,8 +33,17 @@ neighbour_target = np.array([5, 50])
 
 human_manager = HumanManager()
 human_manager.rvo2setup(agent_positions_by_pattern, neighbour_target=neighbour_target)
+# with open('./human_path.pkl', 'rb') as f:
+#     agent_positions = pickle.load(f)
+# print(agent_positions)
+# human_manager.fixpathsetup(agent_positions)
 print(f"Human Number is {len(human_manager)}")
 mapinfo = makeWall(robot_position, 51)
+
+print(human_manager[0].position)
+
+# import sys
+# sys.exit(0)
 
 new_mapinfo = [
     [0, 0],
@@ -84,6 +93,9 @@ for i in range(1, steps - 1):
     plt.pause(0.1)
     plt.cla()
     isShowAxisOption = True
+    
+with open('./human_path.pkl', 'wb') as f:
+    pickle.dump(agent_positions, f)
     
 ax.set_xlim(0, 100)
 ax.set_ylim(0, 100)
